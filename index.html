@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stempel</title>
+<style>
+  :root {
+    --papir: #f6f3ea;
+    --blaek: #1f2328;
+    --svag: #6b6f76;
+    --linje: #d8d3c4;
+    --stempel: #a3242a;
+    --knap: #fffdf7;
+    --knap-hover: #efe9d8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --papir: #1b1c1e;
+      --blaek: #e6e3da;
+      --svag: #9a9a94;
+      --linje: #3a3b3e;
+      --stempel: #e0656a;
+      --knap: #242528;
+      --knap-hover: #2e3033;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--papir);
+    color: var(--blaek);
+    font: 15px/1.45 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+  }
+  header {
+    border-bottom: 1px solid var(--linje);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  .journal { color: var(--svag); font-size: 12px; }
+  #fase { color: var(--svag); font-size: 13px; }
+  .hovedtal {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 8px 0 2px;
+  }
+  .nogletal { display: flex; flex-wrap: wrap; gap: 4px 24px; color: var(--svag); }
+  .nogletal b { color: var(--blaek); font-weight: 600; }
+  button {
+    font: inherit;
+    color: inherit;
+    background: var(--knap);
+    border: 1px solid var(--blaek);
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: var(--knap-hover); }
+  button:disabled { opacity: .4; cursor: default; }
+  #stempel {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    padding: 14px 32px;
+    border: 2px solid var(--stempel);
+    color: var(--stempel);
+    text-transform: uppercase;
+  }
+  #stempel:active { transform: translateY(1px) rotate(-1deg); }
+  #sidste-sag { color: var(--svag); font-size: 12px; min-height: 1.4em; margin-top: 6px; }
+  section { margin-top: 28px; }
+  section[hidden] { display: none; }
+  h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--svag);
+    border-bottom: 1px solid var(--linje);
+    padding-bottom: 4px;
+    margin: 0 0 8px;
+  }
+  .post {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--linje);
+  }
+  .post .titel { font-weight: 600; }
+  .post .antal { color: var(--svag); font-weight: 400; }
+  .post .besk { color: var(--svag); font-size: 13px; }
+  .post .virkning { font-size: 13px; }
+  .post button { white-space: nowrap; flex-shrink: 0; }
+  .post.ny { animation: ny 1.2s ease-out; }
+  @keyframes ny { from { background: var(--knap-hover); } to { background: transparent; } }
+  #log { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+  #log li { padding: 3px 0; }
+  #log li .tid { color: var(--svag); margin-right: 8px; }
+  #log li:first-child { font-weight: 600; }
+  footer {
+    margin-top: 40px;
+    padding-top: 12px;
+    border-top: 1px solid var(--linje);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    color: var(--svag);
+    font-size: 12px;
+  }
+  footer button { font-size: 12px; padding: 4px 10px; border-color: var(--svag); }
+  @media (max-width: 520px) {
+    .post { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="journal">Journalnr. 2026-STP-0001 · Fortroligt efter offentlighedslovens § 23</div>
+    <div id="fase"></div>
+    <div class="hovedtal"><span id="formularer">0</span> godkendte formularer</div>
+    <div class="nogletal">
+      <span id="vis-rate" hidden>Formularer/sek: <b id="rate">0</b></span>
+      <span id="vis-budget" hidden>Budget: <b id="budget">0 kr.</b></span>
+      <span id="vis-pr-stempel" hidden>Pr. stempel: <b id="pr-stempel">1</b></span>
+    </div>
+  </header>
+
+  <div>
+    <button id="stempel" type="button">Stempel</button>
+    <div id="sidste-sag"></div>
+  </div>
+
+  <section id="sek-opgraderinger" hidden>
+    <h2>Indkøb og cirkulærer</h2>
+    <div id="opgraderinger"></div>
+  </section>
+
+  <section id="sek-personale" hidden>
+    <h2>Personale</h2>
+    <div id="personale"></div>
+  </section>
+
+  <section id="sek-log" hidden>
+    <h2>Meddelelser</h2>
+    <ul id="log"></ul>
+  </section>
+
+  <footer>
+    <span id="gemt">Ikke gemt endnu</span>
+    <span>
+      <button id="gem" type="button">Gem nu</button>
+      <button id="nulstil" type="button">Nulstil</button>
+    </span>
+  </footer>
+</main>
+
+<script>
+'use strict';
+
+// ---------------------------------------------------------------------------
+// Konstanter
+// ---------------------------------------------------------------------------
+
+const GEM_NOEGLE = 'stempel-gem-v1';
+const TICK_MS = 100;
+const AUTOSAVE_MS = 10000;
+const PRISVAEKST = 1.15;
+const LOG_MAKS = 40;
+
+// Ansættelser. rate = formularer/sek pr. person før multiplikatorer.
+const PERSONALE = [
+  {
+    id: 'sagsbehandler',
+    navn: 'Sagsbehandler',
+    flertal: 'sagsbehandlere',
+    besk: 'Stempler i et roligt, overenskomstmæssigt tempo. Holder frokost kl. 11.30.',
+    pris: 20,
+    rate: 0.25,
+    laasOp: s => s.formularer >= 20,
+    besked: 'HR: Der er bevilget midler til ansættelse af en sagsbehandler (løntrin 31).',
+  },
+  {
+    id: 'specialkonsulent',
+    navn: 'Specialkonsulent',
+    flertal: 'specialkonsulenter',
+    besk: 'Har en master i offentlig forvaltning og to skærme. Stempler med overbevisning.',
+    pris: 300,
+    rate: 2,
+    laasOp: s => s.formularer >= 200 && s.personale.sagsbehandler >= 4,
+    besked: 'HR: Stillingsbetegnelsen "specialkonsulent" er nu godkendt til opslag.',
+  },
+  {
+    id: 'fuldmaegtig',
+    navn: 'Fuldmægtig',
+    flertal: 'fuldmægtige',
+    besk: 'Kender alle paragrafferne udenad og et par, der ikke findes endnu.',
+    pris: 4000,
+    rate: 15,
+    laasOp: s => s.formularer >= 1500 && s.personale.specialkonsulent >= 3,
+    besked: 'HR: Ministeriet har frigivet en fuldmægtig fra puljen af overskydende fuldmægtige.',
+  },
+];
+
+// Engangsopgraderinger. virkning() ændrer multiplikatorerne.
+const OPGRADERINGER = [
+  {
+    id: 'pude1',
+    navn: 'Ny stempelpude',
+    besk: 'Den gamle er tørret ind siden 2014. Blå, ikke-giftig, på indkøbsaftalen.',
+    virkningTekst: 'Stempler giver dobbelt.',
+    pris: 10,
+    laasOp: s => s.formularer >= 5,
+    virkning: m => { m.stempel *= 2; },
+    besked: 'Indkøb: Der er åbnet for bestilling af én (1) stempelpude.',
+  },
+  {
+    id: 'kaffe',
+    navn: 'Kaffeordning',
+    besk: 'Filterkaffe i termokande. Mælk må medbringes hjemmefra.',
+    virkningTekst: 'Sagsbehandlere +50 %.',
+    pris: 75,
+    laasOp: s => s.personale.sagsbehandler >= 2,
+    virkning: m => { m.sagsbehandler *= 1.5; },
+    besked: 'Personaleforeningen har indsendt en ansøgning om kaffeordning.',
+  },
+  {
+    id: 'pude2',
+    navn: 'Stempelpude med gelindlæg',
+    besk: 'Ensartet farveafgivelse. Kræver underskrevet modtagelseskvittering.',
+    virkningTekst: 'Stempler giver dobbelt.',
+    pris: 120,
+    laasOp: s => s.opgraderinger.pude1 && s.formularer >= 80,
+    virkning: m => { m.stempel *= 2; },
+    besked: 'Indkøb: Leverandøren tilbyder nu stempelpuder med gelindlæg.',
+  },
+  {
+    id: 'gebyr1',
+    navn: 'Ekspeditionsgebyr',
+    besk: 'Indført ved cirkulære. Opkræves også, når ansøgningen afvises.',
+    virkningTekst: 'Budget pr. formular +50 %.',
+    pris: 150,
+    laasOp: s => s.formularer >= 120,
+    virkning: m => { m.budget *= 1.5; },
+    besked: 'Økonomi: Udkast til cirkulære om ekspeditionsgebyr ligger klar til underskrift.',
+  },
+  {
+    id: 'genvej',
+    navn: 'Genvejstast til stempel (F9)',
+    besk: 'Konfigureret af IT efter 14 dages behandlingstid.',
+    virkningTekst: 'Hvert stempel giver også 10 % af personalets formularer/sek.',
+    pris: 250,
+    laasOp: s => s.rateCache >= 3,
+    virkning: m => { m.genvej += 0.10; },
+    besked: 'IT: Din sag om genvejstast er nu færdigbehandlet.',
+  },
+  {
+    id: 'stole',
+    navn: 'Ergonomiske kontorstole',
+    besk: 'Med lændestøtte og et skilt om, at lændestøtten ikke må justeres.',
+    virkningTekst: 'Sagsbehandlere +50 %.',
+    pris: 300,
+    laasOp: s => s.personale.sagsbehandler >= 6,
+    virkning: m => { m.sagsbehandler *= 1.5; },
+    besked: 'Arbejdsmiljøudvalget anbefaler nye kontorstole (bilag 1-7 vedlagt).',
+  },
+  {
+    id: 'pude3',
+    navn: 'Selvfarvende datostempel',
+    besk: 'Stempler både "GODKENDT" og dags dato. Datoen kan ikke ændres.',
+    virkningTekst: 'Stempler giver dobbelt.',
+    pris: 500,
+    laasOp: s => s.opgraderinger.pude2 && s.formularer >= 350,
+    virkning: m => { m.stempel *= 2; },
+    besked: 'Indkøb: Selvfarvende datostempler er optaget på rammeaftalen.',
+  },
+  {
+    id: 'kalender',
+    navn: 'Fælles kalender',
+    besk: 'Alle kan se, hvornår alle andre er optaget. Det er de altid.',
+    virkningTekst: 'Alt personale ×2.',
+    pris: 900,
+    laasOp: s => s.personale.specialkonsulent >= 2,
+    virkning: m => { m.personale *= 2; },
+    besked: 'IT: Fælles kalender er klar til udrulning efter godkendt risikovurdering.',
+  },
+  {
+    id: 'gebyr2',
+    navn: 'Gebyrforhøjelse (finanslovsaftale)',
+    besk: 'Indgået kl. 03.40 en lørdag. Ingen kan huske, hvem der foreslog det.',
+    virkningTekst: 'Budget pr. formular +50 %.',
+    pris: 1500,
+    laasOp: s => s.formularer >= 1000,
+    virkning: m => { m.budget *= 1.5; },
+    besked: 'Økonomi: Finansloven giver mulighed for gebyrforhøjelse (§ 7.12.03).',
+  },
+  {
+    id: 'skabeloner',
+    navn: 'Standardskabeloner',
+    besk: 'Afgørelser skrives nu ud fra 412 skabeloner. Ingen af dem passer helt.',
+    virkningTekst: 'Specialkonsulenter og fuldmægtige ×2.',
+    pris: 4000,
+    laasOp: s => s.personale.specialkonsulent >= 8,
+    virkning: m => { m.specialkonsulent *= 2; m.fuldmaegtig *= 2; },
+    besked: 'Kontorchefen har udsendt et notat om brug af standardskabeloner.',
+  },
+];
+
+// Faser (kun fase 1 er bygget; fase 2 vises som teaser ved 500).
+const FASER = [
+  { fra: 0, navn: 'Fase 1: Skrivebordet' },
+  { fra: 500, navn: 'Fase 1: Skrivebordet · Fase 2 (Afdelingen) afventer bevilling' },
+];
+
+// ---------------------------------------------------------------------------
+// Tilstand
+// ---------------------------------------------------------------------------
+
+function nyTilstand() {
+  const personale = {};
+  for (const p of PERSONALE) personale[p.id] = 0;
+  return {
+    version: 1,
+    formularer: 0,      // samlet antal godkendte formularer
+    budget: 0,          // kr.
+    stempler: 0,        // manuelle stempler
+    sagsnr: 0,          // løbenummer til visning
+    personale,
+    opgraderinger: {},  // id -> true
+    set: {},            // id -> true, når en ting er låst op (forsvinder ikke igen)
+    log: [],            // [{t, tekst}]
+    startet: Date.now(),
+    rateCache: 0,       // formularer/sek fra personale; genberegnes hvert tick
+  };
+}
+
+let S = nyTilstand();
+
+function hentGemt() {
+  let raa;
+  try { raa = localStorage.getItem(GEM_NOEGLE); } catch (e) { return; }
+  if (!raa) return;
+  try {
+    const data = JSON.parse(raa);
+    const frisk = nyTilstand();
+    S = Object.assign(frisk, data);
+    S.personale = Object.assign(nyTilstand().personale, data.personale || {});
+    S.opgraderinger = Object.assign({}, data.opgraderinger || {});
+    S.set = Object.assign({}, data.set || {});
+    S.log = Array.isArray(data.log) ? data.log.slice(0, LOG_MAKS) : [];
+  } catch (e) {
+    console.warn('Kunne ikke indlæse gemt spil', e);
+  }
+}
+
+function gem() {
+  try {
+    localStorage.setItem(GEM_NOEGLE, JSON.stringify(S));
+    sidstGemt = Date.now();
+  } catch (e) {
+    console.warn('Kunne ikke gemme', e);
+  }
+}
+
+let sidstGemt = 0;
+
+// ---------------------------------------------------------------------------
+// Beregninger
+// ---------------------------------------------------------------------------
+
+function multiplikatorer() {
+  const m = { stempel: 1, budget: 1, personale: 1, genvej: 0 };
+  for (const p of PERSONALE) m[p.id] = 1;
+  for (const o of OPGRADERINGER) if (S.opgraderinger[o.id]) o.virkning(m);
+  return m;
+}
+
+function personaleRate(m = multiplikatorer()) {
+  let r = 0;
+  for (const p of PERSONALE) r += S.personale[p.id] * p.rate * m[p.id] * m.personale;
+  return r;
+}
+
+function prStempel(m = multiplikatorer()) {
+  return m.stempel + m.genvej * personaleRate(m);
+}
+
+function prisPaa(p) {
+  return Math.ceil(p.pris * Math.pow(PRISVAEKST, S.personale[p.id]));
+}
+
+function godkend(antal) {
+  if (antal <= 0) return;
+  const m = multiplikatorer();
+  S.formularer += antal;
+  S.budget += antal * m.budget;
+  S.sagsnr += antal;
+}
+
+// ---------------------------------------------------------------------------
+// Handlinger
+// ---------------------------------------------------------------------------
+
+function stempl() {
+  S.stempler++;
+  godkend(prStempel());
+}
+
+function ansaet(id) {
+  const p = PERSONALE.find(x => x.id === id);
+  const pris = prisPaa(p);
+  if (S.budget < pris) return;
+  S.budget -= pris;
+  S.personale[id]++;
+  if (S.personale[id] === 1) logbesked(`${p.navn} tiltrådt. Velkomstmappe udleveret.`);
+}
+
+function koeb(id) {
+  const o = OPGRADERINGER.find(x => x.id === id);
+  if (S.opgraderinger[id] || S.budget < o.pris) return;
+  S.budget -= o.pris;
+  S.opgraderinger[id] = true;
+  logbesked(`Godkendt: ${o.navn}.`);
+}
+
+function logbesked(tekst) {
+  S.log.unshift({ t: Date.now(), tekst });
+  if (S.log.length > LOG_MAKS) S.log.length = LOG_MAKS;
+  logAendret = true;
+}
+
+// ---------------------------------------------------------------------------
+// Tick-loop (spillogik, ca. 10 gange i sekundet)
+// ---------------------------------------------------------------------------
+
+let sidsteTick = Date.now();
+
+function tick() {
+  const nu = Date.now();
+  // Sekunder siden sidste tick. Virker også, når fanen er i baggrunden
+  // og browseren drosler setInterval ned.
+  const dt = Math.max(0, (nu - sidsteTick) / 1000);
+  sidsteTick = nu;
+
+  const m = multiplikatorer();
+  S.rateCache = personaleRate(m);
+  godkend(S.rateCache * dt);
+
+  tjekOplaasninger();
+
+  if (nu - sidstGemt >= AUTOSAVE_MS) gem();
+}
+
+function tjekOplaasninger() {
+  for (const p of PERSONALE) {
+    if (!S.set[p.id] && p.laasOp(S)) {
+      S.set[p.id] = true;
+      logbesked(p.besked);
+    }
+  }
+  for (const o of OPGRADERINGER) {
+    if (!S.set[o.id] && o.laasOp(S)) {
+      S.set[o.id] = true;
+      logbesked(o.besked);
+    }
+  }
+  if (!S.set.fase2teaser && S.formularer >= 500) {
+    S.set.fase2teaser = true;
+    logbesked('Direktionen har noteret sig din effektivitet. Oprettelse af en afdeling er sendt i høring.');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Formatering
+// ---------------------------------------------------------------------------
+
+const ENHEDER = [
+  [1e15, 'bia.'],
+  [1e12, 'bio.'],
+  [1e9, 'mia.'],
+  [1e6, 'M'],
+  [1e3, 'K'],
+];
+
+function tal(n, decimaler = 0) {
+  if (!isFinite(n)) return '∞';
+  if (Math.abs(n) < 10000) {
+    const v = decimaler ? n : Math.floor(n);
+    return v.toLocaleString('da-DK', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimaler,
+    });
+  }
+  for (const [graense, navn] of ENHEDER) {
+    if (Math.abs(n) >= graense) {
+      const v = n / graense;
+      const d = v >= 100 ? 0 : v >= 10 ? 1 : 2;
+      return v.toLocaleString('da-DK', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' ' + navn;
+    }
+  }
+  return String(n);
+}
+
+function kr(n) {
+  return tal(n) + ' kr.';
+}
+
+function rate(n) {
+  return tal(n, n < 100 ? 1 : 0);
+}
+
+function klokken(t) {
+  const d = new Date(t);
+  return 'Kl. ' + String(d.getHours()).padStart(2, '0') + '.' + String(d.getMinutes()).padStart(2, '0');
+}
+
+// ---------------------------------------------------------------------------
+// Visning (adskilt fra tick; kører på requestAnimationFrame)
+// ---------------------------------------------------------------------------
+
+const $ = id => document.getElementById(id);
+const poster = {}; // id -> { el, knap, antal, ... }
+let logAendret = true;
+
+function saetTekst(el, tekst) {
+  if (el.textContent !== tekst) el.textContent = tekst;
+}
+
+function lavPost(beholder, id, titel, besk, virkning, knaptekst, onclick) {
+  const el = document.createElement('div');
+  el.className = 'post ny';
+  el.innerHTML =
+    '<div><div class="titel"></div><div class="besk"></div><div class="virkning"></div></div>';
+  el.querySelector('.titel').textContent = titel;
+  el.querySelector('.besk').textContent = besk;
+  el.querySelector('.virkning').textContent = virkning;
+  const knap = document.createElement('button');
+  knap.type = 'button';
+  knap.textContent = knaptekst;
+  knap.addEventListener('click', onclick);
+  el.appendChild(knap);
+  beholder.appendChild(el);
+  return { el, knap };
+}
+
+function visPersonale(m) {
+  for (const p of PERSONALE) {
+    if (!S.set[p.id]) continue;
+    let post = poster[p.id];
+    if (!post) {
+      post = poster[p.id] = lavPost($('personale'), p.id, p.navn, p.besk, '', '', () => ansaet(p.id));
+      const antal = document.createElement('span');
+      antal.className = 'antal';
+      post.el.querySelector('.titel').appendChild(antal);
+      post.antal = antal;
+      post.virkning = post.el.querySelector('.virkning');
+    }
+    const n = S.personale[p.id];
+    const prPerson = p.rate * m[p.id] * m.personale;
+    const pris = prisPaa(p);
+    saetTekst(post.antal, n ? ` (${n} ansat)` : '');
+    saetTekst(post.virkning,
+      `${rate(prPerson)} formularer/sek pr. ${p.navn.toLowerCase()}` +
+      (n ? ` · i alt ${rate(prPerson * n)}/sek` : ''));
+    saetTekst(post.knap, `Ansæt · ${kr(pris)}`);
+    post.knap.disabled = S.budget < pris;
+  }
+  $('sek-personale').hidden = !PERSONALE.some(p => S.set[p.id]);
+}
+
+function visOpgraderinger() {
+  let nogenSynlig = false;
+  for (const o of OPGRADERINGER) {
+    if (!S.set[o.id]) continue;
+    let post = poster[o.id];
+    if (S.opgraderinger[o.id]) {
+      if (post) { post.el.remove(); delete poster[o.id]; }
+      continue;
+    }
+    nogenSynlig = true;
+    if (!post) {
+      post = poster[o.id] = lavPost($('opgraderinger'), o.id, o.navn, o.besk, o.virkningTekst,
+        `Godkend · ${kr(o.pris)}`, () => koeb(o.id));
+    }
+    post.knap.disabled = S.budget < o.pris;
+  }
+  $('sek-opgraderinger').hidden = !nogenSynlig;
+}
+
+function visLog() {
+  if (!logAendret) return;
+  logAendret = false;
+  const ul = $('log');
+  ul.textContent = '';
+  for (const l of S.log) {
+    const li = document.createElement('li');
+    const tid = document.createElement('span');
+    tid.className = 'tid';
+    tid.textContent = klokken(l.t);
+    li.appendChild(tid);
+    li.appendChild(document.createTextNode(l.tekst));
+    ul.appendChild(li);
+  }
+  $('sek-log').hidden = S.log.length === 0;
+}
+
+function visFase() {
+  let navn = FASER[0].navn;
+  for (const f of FASER) if (S.formularer >= f.fra) navn = f.navn;
+  saetTekst($('fase'), navn);
+}
+
+function vis() {
+  const m = multiplikatorer();
+  const r = personaleRate(m);
+  const ps = prStempel(m);
+
+  saetTekst($('formularer'), tal(S.formularer));
+  saetTekst($('rate'), rate(r));
+  saetTekst($('budget'), kr(S.budget));
+  saetTekst($('pr-stempel'), rate(ps));
+  $('vis-rate').hidden = r === 0;
+  $('vis-budget').hidden = S.formularer < 1;
+  $('vis-pr-stempel').hidden = ps === 1;
+
+  if (S.sagsnr >= 1) {
+    const nr = String(Math.floor(S.sagsnr)).padStart(6, '0');
+    saetTekst($('sidste-sag'), `Sag 2026-${nr} godkendt`);
+  }
+
+  visFase();
+  visOpgraderinger();
+  visPersonale(m);
+  visLog();
+
+  const sek = Math.round((Date.now() - sidstGemt) / 1000);
+  saetTekst($('gemt'), sidstGemt ? `Gemt for ${sek} sek. siden` : 'Ikke gemt endnu');
+
+  requestAnimationFrame(vis);
+}
+
+// ---------------------------------------------------------------------------
+// Opstart
+// ---------------------------------------------------------------------------
+
+function nulstil() {
+  if (!confirm('Nulstil spillet? Alle formularer, ansatte og indkøb går tabt.\n\nSagen kan ikke genoptages.')) return;
+  try { localStorage.removeItem(GEM_NOEGLE); } catch (e) {}
+  S = nyTilstand();
+  for (const id in poster) { poster[id].el.remove(); delete poster[id]; }
+  logAendret = true;
+  sidstGemt = 0;
+  sidsteTick = Date.now();
+}
+
+hentGemt();
+sidsteTick = Date.now();
+
+$('stempel').addEventListener('click', stempl);
+$('gem').addEventListener('click', gem);
+$('nulstil').addEventListener('click', nulstil);
+window.addEventListener('beforeunload', gem);
+document.addEventListener('visibilitychange', () => { if (document.hidden) gem(); });
+
+setInterval(tick, TICK_MS);
+requestAnimationFrame(vis);
+</script>
+</body>
+</html>
